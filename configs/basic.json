@@ -1,0 +1,17 @@
+{
+    "agent": "MnistAgent",
+    "exp_name": "basic",
+    "batch_size": 265,
+    "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-fast",
+    "learning_rate": 1e-3,
+    "momentum": 0.90,
+    "cuda": true,
+    "seed": 42,
+    "gpu_device": 0,
+    "max_epoch": 30,
+    "log_interval": 10,
+    "pct_data": 1,
+    "model": {
+        "cls": "MobileNetV2"
+    }
+}
