@@ -1,0 +1,87 @@
+* QuickDraw
+
+
+** Data
+
+Number of samples per class: 25.000
+Size of image: 128x128
+
+** Experiments General
+
+| model               | %Data |  LossV |  LossT |  MapKV |  MapKT |  BS | Epoch | time  | Kaggle |
+| DarkNet             |  100% | 0.7841 | 0.8071 | 0.8556 | 0.8513 |     |     2 | 24h   |  0.901 |
+| MNAS Baseline       |    1% | 1.8771 | 1.7184 | 0.6431 | 0.6587 |   - |     5 | 15    |        |
+| DenseNet Baseline   |    1% | 1.5810 | 1.2604 | 0.6903 | 0.7577 | 100 |     5 | 30min |        |
+| DenseNet Drop 0.2   |    1% | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 100 |     5 | 30min |        |
+| DenesNet compress * |       |        |        |        |        |     |       |       |        |
+| DenseNet Drop 0.2   |  100% |        |        |        |        |     |       |       |        |
+
+** Darknet baseline
+
+Optimizer: Adam
+LR: 1e-3
+Epoch: 2
+num_blocks: [1, 2, 8, 8, 4]
+nf: 32
+%Data: 100%
+
+| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+|     1 | 0.8531 | 1.0830 | 0.8425 | 0.7989 | 12 h |
+|     2 | 0.7841 | 0.8071 | 0.8556 | 0.8513 | 12g  |
+
+
+ set: Average loss: 0.7841, Accuracy: 136751/171577 (80%), mapk3: 0.8556, TrainLoss: 0.8071, TrainMapk3: 0.8513
+
+
+** Darknet baseline
+
+Optimizer: Adam
+LR: 1e-3
+Epoch: 5
+nf: 32
+%Data: 1%
+
+| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+|     1 | 3.4286 | 4.3555 | 0.3075 | 0.1594 | 3m   |
+|     2 | 2.4475 | 2.7496 | 0.5092 | 0.4419 | 3m   |
+|     3 | 2.0986 | 2.2061 | 0.5816 | 0.5728 | 3m   |
+|     4 | 2.0228 | 1.9228 | 0.6095 | 0.6183 | 3m   |
+|     5 | 1.8771 | 1.7184 | 0.6431 | 0.6587 | 3m   |
+
+** Densenet baseline
+
+Optimizer: Adam
+LR: 1e-3
+Epoch: 5
+conf: 121
+bn_size: 4
+drop_rate: 0
+%Data: 1%
+
+| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+|     1 | 2.6978 | 3.3113 | 0.4872 | 0.3555 | 6m   |
+|     2 | 1.8916 | 2.0103 | 0.6457 | 0.6099 | 6m   |
+|     3 | 1.7597 | 1.6478 | 0.6668 | 0.6785 | 6m   |
+|     4 | 1.7011 | 1.5232 | 0.6938 | 0.7263 | 6m   |
+|     5 | 1.5810 | 1.2604 | 0.6904 | 0.7578 | 6m   |
+
+** Densenet drop=0.2
+
+Optimizer: Adam
+LR: 1e-3
+Epoch: 5
+conf: 121
+bn_size: 4
+drop_rate: 0
+%Data: 1%
+
+| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+|     1 | 2.6147 | 3.5118 | 0.4879 | 0.3156 | 6m   |
+|     2 | 1.9382 | 2.1292 | 0.6311 | 0.5773 | 6m   |
+|     3 | 1.8662 | 1.7391 | 0.6342 | 0.6607 | 6m   |
+|     4 | 1.7586 | 1.5193 | 0.6712 | 0.7066 | 6m   |
+|     5 | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 6m   |
+|     6 | 1.5832 | 1.2292 | 0.7062 | 0.7685 | 6m   |
+|     7 | 1.5129 | 1.1188 | 0.7202 | 0.7817 | 6m   |
+|     8 | 1.5263 | 1.0146 | 0.7203 | 0.8087 | 6m   |
+|     9 | 1.5187 | 0.9212 | 0.7271 | 0.8180 | 6m   |

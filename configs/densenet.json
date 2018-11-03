@@ -1,13 +1,13 @@
 {
     "agent": "MnistAgent",
-    "exp_name": "densenet-small-drop=0.4",
-    "batch_size": 100,
+    "exp_name": "densenet-full",
+    "batch_size": 230,
     "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-fast",
     "learning_rate": 1e-3,
     "momentum": 0.90,
     "cuda": true,
     "seed": 42,
-    "gpu_device": 1,
+    "gpu_device": 0,
     "max_epoch": 10,
     "log_interval": 10,
     "pct_data": 1,
@@ -16,6 +16,6 @@
         "cls": "Densenet",
         "conf": 121,
         "bn_size": 4,
-        "drop_rate": 0.4
+        "drop_rate": 0.2
     }
 }

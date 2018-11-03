@@ -16,32 +16,37 @@ class Dataset():
         self.root = config["data_root"]
         self.pct_data = config["pct_data"] if "pct_data" in config else 1.0
 
-    def createDataloader(self, folder):
+    def createDataloader(self, folder, random=True):
         data = ImageFolder(folder, transform=ToTensor())
-
-        indices = randperm(len(data))
-        indices = indices[0: int(len(data) * self.pct_data)]
-        data = Subset(data, indices) ## Make dataset smaller
+        _data = data
+        if random:
+            indices = randperm(len(data))
+            indices = indices[0: int(len(data) * self.pct_data)]
+            data = Subset(data, indices) ## Make dataset smaller
 
         return DataLoader(data,
                           batch_size=self.batch_size,
-                          shuffle=True,
-                          num_workers=self.num_workers)
+                          shuffle=random,
+                          num_workers=self.num_workers), _data
 
     def train(self):
         folder = join(self.root, "train")
         if self.config.use_valid:
             folder = join(self.root, "valid")
 
-        return self.createDataloader(folder)
+        loader, dataset = self.createDataloader(folder)
+        self.train_dataset = dataset
+        return loader
 
     def validate(self):
         folder = join(self.root, "valid")
-        return self.createDataloader(folder)
+        loader, dataset = self.createDataloader(folder)
+        return loader
 
     def test(self):
         folder = join(self.root, "test")
-        return self.createDataloader(folder)
+        loader, dataset = self.createDataloader(folder, random=False)
+        return loader, dataset
 
 
 

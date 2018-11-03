@@ -12,8 +12,10 @@ from torch.autograd import Variable
 import torch.optim as optim
 import torch.nn.functional as F
 
+import pandas as pd
 
 from os.path import join
+import os
 
 from dataset import Dataset
 
@@ -106,6 +108,7 @@ class MnistAgent:
         PATH = join(self.config.checkpoint_dir, file_name)
         if not self.config.dry_run:
             torch.save(self.model.state_dict(), PATH)
+            self.logger.info(f"model saved in {PATH}")
 
     def run(self):
         """
@@ -201,6 +204,48 @@ class MnistAgent:
 
         if self.scheduler:
             self.scheduler.step(loss_avg.val)
+
+    def test(self):
+        self.model.eval()
+
+        test_data_loader, dataset = Dataset(self.config).test()
+
+        checkpoint = torch.load(self.config.checkpoint)
+        self.model.load_state_dict(checkpoint)
+
+        key_ids = [os.path.basename(filepath)[:-4] for (filepath, cls) in dataset.imgs]
+        cls_to_idx = self.dataset.train_dataset.class_to_idx
+        idx_to_cls =  {cls_to_idx[c]:c for c in cls_to_idx}
+
+        def row2string(r):
+            v = [r[-1], r[-2], r[-3]]
+            v = [v.item() for v in v]
+            v = [idx_to_cls[v].replace(' ', '_') for v in v]
+
+            return ' '.join(v)
+
+        labels = []
+
+        with torch.no_grad():
+            for idx, (data, target) in enumerate(test_data_loader):
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data)
+
+                n = output.detach().cpu().numpy()
+
+                order = np.argsort(n, 1)[:, -3:]
+
+                predicted_y = [row2string(o) for o in order]
+                labels = labels + predicted_y
+
+                if idx % 10 == 0:
+                    print(f"{idx} of  {len(test_data_loader)}")
+
+
+        d = {'key_id': key_ids,
+             'word': labels}
+        df = pd.DataFrame.from_dict(d)
+        df.to_csv('submission.csv', index=False)
 
 
     def finalize(self):
