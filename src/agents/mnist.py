@@ -28,7 +28,14 @@ from time import gmtime, strftime
 
 class MnistAgent:
 
+    def setup_fp16(self):
+        from apex import amp
+        self.amp_handle = amp.init()
+        self.optimizer = self.amp_handle.wrap_optimizer(self.optimizer)
+
+
     def __init__(self, config):
+
         self.config = config
         self.logger = logging.getLogger("Agent")
         # define models
@@ -47,6 +54,10 @@ class MnistAgent:
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
 
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1, verbose=True)
+
+        if config.fp16:
+            self.setup_fp16()
+
 
         # initialize counter
         self.current_epoch = 0
@@ -143,8 +154,14 @@ class MnistAgent:
             self.optimizer.zero_grad()
             output = self.model(data)
             loss = self.loss(output, target)
-            loss.backward()
-            self.optimizer.step()
+
+            if self.config.fp16:
+                with self.optimizer.scale_loss(loss) as scaled_loss:
+                    scaled_loss.backward()
+                self.optimizer.step()
+            else:
+                loss.backward()
+                self.optimizer.step()
 
             self.loss_train_avg.update(loss.item())
             ## Logging

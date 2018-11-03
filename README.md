@@ -31,7 +31,17 @@ conda create --name quickdraw --file requirements.conda
 source activate quickdraw
 ```
 
-4. Install requirments using pip
+4. install apex
+
+```
+git submodule init
+git submodule update
+cd apex
+python setup.py install
+```
+
+
+5. Install requirments using pip
 
 ```
 pip install -r requirements.txt
