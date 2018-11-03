@@ -64,7 +64,7 @@ class MnasNet(nn.Module):
     def __init__(self, config): # n_class=1000, input_size=224, width_mult=1.):
         super(MnasNet, self).__init__()
 
-        n_class = 430
+        n_class = config.num_classes
         width_mult = config.model.width_mul if "width_mul" in config.model else 1.0
         input_size = config.model.input_size
 

@@ -90,10 +90,6 @@ One thing could be do one valid each 10% or each 25% of epoch
 
 A script that uses a model and a checkpoint and writes a csv for kaggle submission
 
-3. half precission
-
-maybe this could make the algorithm go fast
-
 4. Loss functions
 
 Test other loos functions like:
@@ -111,3 +107,11 @@ Try it? maybe... I don't know how much gain could come from here
 6. Other schedulers
 
 I'm using LRonPlateau but the problem is that the epoch is so inmense it takes forever to detect the change...
+
+7. Denset efficient
+
+https://github.com/arunpatala/cifarSOTA/blob/master/code/pytorch_efficient_densenet/models/densenet.py
+
+8. SOTA in CIFAR
+
+https://github.com/arunpatala/cifarSOTA
