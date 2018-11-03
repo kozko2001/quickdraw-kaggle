@@ -97,6 +97,8 @@ def process_config(json_file):
 
     config.use_valid = "USE_VALID" in environ
 
+    if not "fp16" in config:
+        config.fp16 = False
 
 
 
