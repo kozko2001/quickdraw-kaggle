@@ -24,9 +24,6 @@ from utils.metrics import AverageMeter, mapk3
 #from utils.misc import print_cuda_statistics
 import logging
 
-import calendar
-import time
-from time import gmtime, strftime
 from math import log2
 
 class MnistAgent:
@@ -50,7 +47,11 @@ class MnistAgent:
         # define optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
 
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1, verbose=True)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
+                                                                    patience=2,
+                                                                    verbose=True,
+                                                                    factor=0.5,
+                                                                    cooldown=2                                                                                                                            )
 
 
         # initialize counter
@@ -84,7 +85,7 @@ class MnistAgent:
         self.load_checkpoint()
 
         # Summary Writer
-        run_name = f'{config.exp_name}_{strftime("%Y-%m-%d %H:%M:%S", gmtime())}'
+        run_name = f'{config.exp_name}'
         self.summary_writer = SummaryWriter(self.config.summary_dir, run_name)
 
     def load_checkpoint(self, file_name = "checkpoint.pth.tar"):
@@ -103,8 +104,7 @@ class MnistAgent:
         :return:
         """
         if not file_name:
-            file_name = f"{calendar.timegm(time.gmtime())}.pth"
-
+            file_name = f"{self.current_epoch}_{self.current_iteration}.pth"
         PATH = join(self.config.checkpoint_dir, file_name)
         if not self.config.dry_run:
             torch.save(self.model.state_dict(), PATH)
@@ -146,7 +146,8 @@ class MnistAgent:
 
         data_len = len(self.train_data_loader)
         steps = int(data_len//10)
-        self.logger.info(f"Setting validation step at each {steps} step")
+        current_step = 0
+        self.logger.info(f"Setting validation step at each {steps} step of total of {data_len} steps")
 
 
         for batch_idx, (data, target) in enumerate(self.train_data_loader):
@@ -173,14 +174,14 @@ class MnistAgent:
                     self.summary_writer.add_scalar("train_loss", loss.item(), self.current_iteration)
                     self.summary_writer.add_scalar("train_mapk", mapk3_metric, self.current_iteration)
 
-            ## Valid each
-            if batch_idx % steps ==0 and batch_idx > 0:
-                self.validate()
+            ## Valid each log2 steps
+            if batch_idx % steps ==0 and batch_idx > 0 and data_len > 100:
+                self.validate(True)
 
             self.current_iteration += 1
         self.save_checkpoint()
 
-    def validate(self):
+    def validate(self, step = False):
         """
         One cycle of model validation
         :return:
@@ -205,17 +206,18 @@ class MnistAgent:
                 mapk_avg.update(mapk3_metric)
 
         self.logger.info("Epoch, LossV, LossT, Mapk3V, Mapk3T")
-        self.logger.info("| {} | {:.4f} | {:.4f} | {:.4f} | {:.4f} |".format(
+        self.logger.info("| {} | {:.4f} | {:.4f} | {:.4f} | {:.4f} | {}".format(
                          self.current_epoch,
                          loss_avg.val,
                          self.loss_train_avg.val,
                          mapk_avg.val,
-                         self.mapk_train_avg.val))
+                         self.mapk_train_avg.val,
+                         step))
 
 
         if self.summary_writer:
-            self.summary_writer.add_scalar("valid_loss", loss_avg.val, self.current_epoch)
-            self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, self.current_epoch)
+            self.summary_writer.add_scalar("valid_loss", loss_avg.val, self.current_iteration)
+            self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, self.current_iteration)
 
         if self.scheduler:
             old_lr = self.optimizer.param_groups[0]['lr']
@@ -224,7 +226,7 @@ class MnistAgent:
             if old_lr > new_lr:
                 self.logger.info(f"Changing LR from {old_lr} to {new_lr}")
 
-
+        self.model.train()
 
     def test(self):
         self.model.eval()
@@ -275,6 +277,6 @@ class MnistAgent:
         :return:
         """
         self.logger.info("saving before finalize")
-        file_name = f"killed_{calendar.timegm(time.gmtime())}.pth"
+        file_name = f"killed_{self.current_epoch}_{self.current_iteration}.pth"
         self.save_checkpoint(file_name=file_name)
         self.logger.info(f"saved! with name {file_name}")

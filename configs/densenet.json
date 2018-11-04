@@ -8,7 +8,7 @@
     "cuda": true,
     "seed": 42,
     "gpu_device": 0,
-    "max_epoch": 10,
+    "max_epoch": 20,
     "log_interval": 10,
     "pct_data": 1,
     "num_classes": 340,

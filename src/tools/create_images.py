@@ -6,14 +6,31 @@ import glob
 from PIL import Image
 import ast
 
+config_full = {
+    "name":"fast",
+    "SIZE": 128,
+    "NUM_IMAGES":25000
+    }
+
+config_small = {
+    "name": "small",
+    "SIZE": 80,
+    "NUM_IMAGES": 2000
+    }
+
+config = config_small
+config_name = config["name"]
+
+print(config)
+
 INPUT_DIR = './input/quickdraw/'
-OUTPUT_DIR = './input/quickdraw-fast/train/'
-TEST_DIR = './input/quickdraw-fast/test/'
+OUTPUT_DIR = f'./input/quickdraw-{config_name}/train/'
+TEST_DIR = f'./input/quickdraw-{config_name}/test/test'
 
 BASE_SIZE = 256
-NCSVS = 100
 NCATS = 340
-NUM_IMAGES=25000
+SIZE=config["SIZE"]
+NUM_IMAGES=config["NUM_IMAGES"]
 
 np.random.seed(seed=1987)
 
@@ -24,7 +41,9 @@ def list_all_categories():
     files = os.listdir(os.path.join(INPUT_DIR, 'input/simplified'))
     return sorted([f2cat(f) for f in files], key=str.lower)
 
-def draw_cv2(raw_strokes, size=128, lw=6, time_color=True):
+
+
+def draw_cv2(raw_strokes, size, lw=6, time_color=True):
     img = np.zeros((BASE_SIZE, BASE_SIZE), np.uint8)
     for t, stroke in enumerate(raw_strokes):
         for i in range(len(stroke[0]) - 1):
@@ -39,7 +58,7 @@ def draw_cv2(raw_strokes, size=128, lw=6, time_color=True):
 
 csv_files = glob.glob(os.path.join(INPUT_DIR, 'input/simplified/*.csv'))
 
-draw = lambda strokes: draw_cv2(strokes, lw=6)
+draw = lambda strokes: draw_cv2(strokes, size=SIZE, lw=6, time_color=True)
 
 print("TRAIN IMAGES")
 

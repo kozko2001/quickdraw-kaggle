@@ -3,124 +3,156 @@
 
 ** Data
 
+*** Full
 Number of samples per class: 25.000
 Size of image: 128x128
 
-** Experiments General
-
-| model               | %Data |  LossV |  LossT |  MapKV |  MapKT |  BS | Epoch | time  | Kaggle |
-| DarkNet             |  100% | 0.7841 | 0.8071 | 0.8556 | 0.8513 |     |     2 | 24h   |  0.901 |
-| MNAS Baseline       |    1% | 1.8771 | 1.7184 | 0.6431 | 0.6587 |   - |     5 | 15    |        |
-| DenseNet Baseline   |    1% | 1.5810 | 1.2604 | 0.6903 | 0.7577 | 100 |     5 | 30min |        |
-| DenseNet Drop 0.2   |    1% | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 100 |     5 | 30min |        |
-| DenesNet compress * |       |        |        |        |        |     |       |       |        |
-| DenseNet Drop 0.4   |  100% | 1.9516 | 1.4879 | 0.6307 | 0.7149 | 100 |     5 | 30 min |        |
+*** Small
+Number of samples per class: 1.500
+Number of samples per class Valid: 500
+Size of image: 80x80
 
 
+** Experiments General Full
 
-** Darknet baseline
-
-Optimizer: Adam
-LR: 1e-3
-Epoch: 2
-num_blocks: [1, 2, 8, 8, 4]
-nf: 32
-%Data: 100%
-
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
-|     1 | 0.8531 | 1.0830 | 0.8425 | 0.7989 | 12 h |
-|     2 | 0.7841 | 0.8071 | 0.8556 | 0.8513 | 12g  |
+| model                  | %Data |  LossV |  LossT |  MapKV |  MapKT |  BS | Epoch | time   | Kaggle |
+| DarkNet                |  100% | 0.7841 | 0.8071 | 0.8556 | 0.8513 |     |     2 | 24h    |  0.901 |
+| MNAS Baseline          |    1% | 1.8771 | 1.7184 | 0.6431 | 0.6587 |   - |     5 | 15     |        |
+| DenseNet Baseline      |    1% | 1.5810 | 1.2604 | 0.6903 | 0.7577 | 100 |     5 | 30min  |        |
+| DenseNet Drop 0.2      |    1% | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 100 |     5 | 30min  |        |
+| DenesNet compress *    |       |        |        |        |        |     |       |        |        |
+| DenseNet Drop 0.4      |    1% | 1.9516 | 1.4879 | 0.6307 | 0.7149 | 100 |     5 | 30 min |        |
+| DenseNet 100% Drop 0.2 |  100% | 0.8152 | 0.8269 | 0.8528 | 0.8477 |     |     2 | 8h     |  0.899 |
+|                        |       |        |        |        |        |     |       |        |        |
 
 
- set: Average loss: 0.7841, Accuracy: 136751/171577 (80%), mapk3: 0.8556, TrainLoss: 0.8071, TrainMapk3: 0.8513
+
+*** darknet baseline
+
+ Optimizer: Adam
+ LR: 1e-3
+ Epoch: 2
+ num_blocks: [1, 2, 8, 8, 4]
+ nf: 32
+ %Data: 100%
+
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+ |     1 | 0.8531 | 1.0830 | 0.8425 | 0.7989 | 12 h |
+ |     2 | 0.7841 | 0.8071 | 0.8556 | 0.8513 | 12g  |
 
 
-** Darknet baseline
-
-Optimizer: Adam
-LR: 1e-3
-Epoch: 5
-nf: 32
-%Data: 1%
-
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
-|     1 | 3.4286 | 4.3555 | 0.3075 | 0.1594 | 3m   |
-|     2 | 2.4475 | 2.7496 | 0.5092 | 0.4419 | 3m   |
-|     3 | 2.0986 | 2.2061 | 0.5816 | 0.5728 | 3m   |
-|     4 | 2.0228 | 1.9228 | 0.6095 | 0.6183 | 3m   |
-|     5 | 1.8771 | 1.7184 | 0.6431 | 0.6587 | 3m   |
-
-** Densenet baseline
-
-Optimizer: Adam
-LR: 1e-3
-Epoch: 5
-conf: 121
-bn_size: 4
-drop_rate: 0
-%Data: 1%
-
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
-|     1 | 2.6978 | 3.3113 | 0.4872 | 0.3555 | 6m   |
-|     2 | 1.8916 | 2.0103 | 0.6457 | 0.6099 | 6m   |
-|     3 | 1.7597 | 1.6478 | 0.6668 | 0.6785 | 6m   |
-|     4 | 1.7011 | 1.5232 | 0.6938 | 0.7263 | 6m   |
-|     5 | 1.5810 | 1.2604 | 0.6904 | 0.7578 | 6m   |
-
-** Densenet drop=0.2
-
-Optimizer: Adam
-LR: 1e-3
-Epoch: 5
-conf: 121
-bn_size: 4
-drop_rate: 0.4
-%Data: 1%
-
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
-|     1 | 2.6147 | 3.5118 | 0.4879 | 0.3156 | 6m   |
-|     2 | 1.9382 | 2.1292 | 0.6311 | 0.5773 | 6m   |
-|     3 | 1.8662 | 1.7391 | 0.6342 | 0.6607 | 6m   |
-|     4 | 1.7586 | 1.5193 | 0.6712 | 0.7066 | 6m   |
-|     5 | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 6m   |
-|     6 | 1.5832 | 1.2292 | 0.7062 | 0.7685 | 6m   |
-|     7 | 1.5129 | 1.1188 | 0.7202 | 0.7817 | 6m   |
-|     8 | 1.5263 | 1.0146 | 0.7203 | 0.8087 | 6m   |
-|     9 | 1.5187 | 0.9212 | 0.7271 | 0.8180 | 6m   |
+  set: Average loss: 0.7841, Accuracy: 136751/171577 (80%), mapk3: 0.8556, TrainLoss: 0.8071, TrainMapk3: 0.8513
 
 
-** Densenet drop=0.4
+*** Darknet baseline
 
-Optimizer: Adam
-LR: 1e-3
-Epoch: 5
-conf: 121
-bn_size: 4
-drop_rate: 0.4
-%Data: 1%
+ Optimizer: Adam
+ LR: 1e-3
+ Epoch: 5
+ nf: 32
+ %Data: 1%
 
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
-|     1 | 3.0185 | 3.6728 | 0.4159 | 0.2844 | 6m   |
-|     2 | 2.4405 | 2.2823 | 0.5323 | 0.5471 | 6m   |
-|     3 | 2.2122 | 1.8760 | 0.5784 | 0.6354 | 6m   |
-|     4 | 2.1045 | 1.6487 | 0.6051 | 0.6796 | 6m   |
-|     5 | 1.9516 | 1.4879 | 0.6307 | 0.7149 | 6m   |
-|     6 | 1.9212 | 1.3626 | 0.6563 | 0.7466 | 6m   |
-|     7 | 2.0170 | 1.2605 | 0.6266 | 0.7557 | 6m   |
-|     8 | 2.1876 | 1.1710 | 0.6007 | 0.7773 | 6m   |
-|     9 | 1.8702 | 0.8877 | 0.6539 | 0.8283 | 6m   |
-|    10 | 2.1024 | 0.8247 | 0.6211 | 0.8466 | 6m   |
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+ |     1 | 3.4286 | 4.3555 | 0.3075 | 0.1594 | 3m   |
+ |     2 | 2.4475 | 2.7496 | 0.5092 | 0.4419 | 3m   |
+ |     3 | 2.0986 | 2.2061 | 0.5816 | 0.5728 | 3m   |
+ |     4 | 2.0228 | 1.9228 | 0.6095 | 0.6183 | 3m   |
+ |     5 | 1.8771 | 1.7184 | 0.6431 | 0.6587 | 3m   |
+
+
+*** Densenet baseline
+
+ Optimizer: Adam
+ LR: 1e-3
+ Epoch: 5
+ conf: 121
+ bn_size: 4
+ drop_rate: 0
+ %Data: 1%
+
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+ |     1 | 2.6978 | 3.3113 | 0.4872 | 0.3555 | 6m   |
+ |     2 | 1.8916 | 2.0103 | 0.6457 | 0.6099 | 6m   |
+ |     3 | 1.7597 | 1.6478 | 0.6668 | 0.6785 | 6m   |
+ |     4 | 1.7011 | 1.5232 | 0.6938 | 0.7263 | 6m   |
+ |     5 | 1.5810 | 1.2604 | 0.6904 | 0.7578 | 6m   |
+
+
+*** Densenet drop=0.2
+
+ Optimizer: Adam
+ LR: 1e-3
+ Epoch: 5
+ conf: 121
+ bn_size: 4
+ drop_rate: 0.4
+ %Data: 1%
+
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+ |     1 | 2.6147 | 3.5118 | 0.4879 | 0.3156 | 6m   |
+ |     2 | 1.9382 | 2.1292 | 0.6311 | 0.5773 | 6m   |
+ |     3 | 1.8662 | 1.7391 | 0.6342 | 0.6607 | 6m   |
+ |     4 | 1.7586 | 1.5193 | 0.6712 | 0.7066 | 6m   |
+ |     5 | 1.5186 | 1.3588 | 0.7179 | 0.7381 | 6m   |
+ |     6 | 1.5832 | 1.2292 | 0.7062 | 0.7685 | 6m   |
+ |     7 | 1.5129 | 1.1188 | 0.7202 | 0.7817 | 6m   |
+ |     8 | 1.5263 | 1.0146 | 0.7203 | 0.8087 | 6m   |
+ |     9 | 1.5187 | 0.9212 | 0.7271 | 0.8180 | 6m   |
+
+
+*** Densenet drop=0.4
+
+ Optimizer: Adam
+ LR: 1e-3
+ Epoch: 5
+ conf: 121
+ bn_size: 4
+ drop_rate: 0.4
+ %Data: 1%
+
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time |
+ |     1 | 3.0185 | 3.6728 | 0.4159 | 0.2844 | 6m   |
+ |     2 | 2.4405 | 2.2823 | 0.5323 | 0.5471 | 6m   |
+ |     3 | 2.2122 | 1.8760 | 0.5784 | 0.6354 | 6m   |
+ |     4 | 2.1045 | 1.6487 | 0.6051 | 0.6796 | 6m   |
+ |     5 | 1.9516 | 1.4879 | 0.6307 | 0.7149 | 6m   |
+ |     6 | 1.9212 | 1.3626 | 0.6563 | 0.7466 | 6m   |
+ |     7 | 2.0170 | 1.2605 | 0.6266 | 0.7557 | 6m   |
+ |     8 | 2.1876 | 1.1710 | 0.6007 | 0.7773 | 6m   |
+ |     9 | 1.8702 | 0.8877 | 0.6539 | 0.8283 | 6m   |
+ |    10 | 2.1024 | 0.8247 | 0.6211 | 0.8466 | 6m   |
+
+
+*** DenseNet 100% drop=0.2
+
+ batch_size: 230
+ learning_rate: 0.001
+ momentum: 0.9
+ conf: 121
+ bn_size: 4
+ drop_rate: 0.2
+
+
+ | epoch |  LossV |  LossT | Mapk3V | Mapk3T | time     |
+ |     1 | 0.8822 |  1.063 | 0.8381 | 0.8015 | 4h 10min |
+ |     2 | 0.8162 | 0.8269 | 0.8528 | 0.8477 | 4h 10min |
+
+
+** Experiments General Small
 
 ** DenseNet 100% drop=0.2
+ batch_size: 600
+ learning_rate: 0.001
+ momentum: 0.9
+ conf: 121
+ bn_size: 4
+ drop_rate: 0.2
 
-batch_size: 230
-learning_rate: 0.001
-momentum: 0.9
-conf: 121
-bn_size: 4
-drop_rate: 0.2
-
-
-| epoch |  LossV |  LossT | Mapk3V | Mapk3T | time     |
-|     1 | 0.8822 |  1.063 | 0.8381 | 0.8015 | 4h 10min |
-|     2 | 0.8162 | 0.8269 | 0.8528 | 0.8477 | 4h 10min |
+|  LossV |  LossT | Mapk3V | Mapk3T | time 10min |
+|--------+--------+--------+--------+------------|
+| 1.4889 | 2.0520 | 0.7158 | 0.6038 | False      |
+| 1.2764 | 1.3014 | 0.7594 | 0.7511 | False      |
+| 1.1818 | 1.0537 | 0.7796 | 0.7999 | False      |
+| 1.1618 | 0.9128 | 0.7843 | 0.8288 | False      |
+| 1.1714 | 0.8471 | 0.7830 | 0.8425 | False      |
+| 1.1709 | 0.8281 | 0.7828 | 0.8440 | False      |
