@@ -86,10 +86,6 @@ Since the dataset is SOOO HUGE, if training with the full dataset takes a lot of
 One thing could be do one valid each 10% or each 25% of epoch
 
 
-2. Test script
-
-A script that uses a model and a checkpoint and writes a csv for kaggle submission
-
 4. Loss functions
 
 Test other loos functions like:

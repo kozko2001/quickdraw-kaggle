@@ -27,6 +27,7 @@ import logging
 import calendar
 import time
 from time import gmtime, strftime
+from math import log2
 
 class MnistAgent:
 
@@ -83,9 +84,8 @@ class MnistAgent:
         self.load_checkpoint()
 
         # Summary Writer
-        if not self.config.dry_run:
-            run_name = f'{config.exp_name}_{strftime("%Y-%m-%d %H:%M:%S", gmtime())}'
-            self.summary_writer = SummaryWriter(self.config.summary_dir, run_name)
+        run_name = f'{config.exp_name}_{strftime("%Y-%m-%d %H:%M:%S", gmtime())}'
+        self.summary_writer = SummaryWriter(self.config.summary_dir, run_name)
 
     def load_checkpoint(self, file_name = "checkpoint.pth.tar"):
         """
@@ -143,6 +143,12 @@ class MnistAgent:
         self.mapk_train_avg = AverageMeter()
 
         self.model.train()
+
+        data_len = len(self.train_data_loader)
+        steps = int(data_len//10)
+        self.logger.info(f"Setting validation step at each {steps} step")
+
+
         for batch_idx, (data, target) in enumerate(self.train_data_loader):
             data, target = data.to(self.device), target.to(self.device)
             self.optimizer.zero_grad()
@@ -153,6 +159,7 @@ class MnistAgent:
             self.optimizer.step()
 
             self.loss_train_avg.update(loss.item())
+
             ## Logging
             if batch_idx % self.config.log_interval == 0:
                 mapk3_metric = mapk3(output, target)
@@ -166,9 +173,12 @@ class MnistAgent:
                     self.summary_writer.add_scalar("train_loss", loss.item(), self.current_iteration)
                     self.summary_writer.add_scalar("train_mapk", mapk3_metric, self.current_iteration)
 
+            ## Valid each
+            if batch_idx % steps ==0 and batch_idx > 0:
+                self.validate()
 
             self.current_iteration += 1
-        self.save_checkpoint(f"")
+        self.save_checkpoint()
 
     def validate(self):
         """
@@ -194,16 +204,27 @@ class MnistAgent:
                 mapk3_metric = mapk3(output, target)
                 mapk_avg.update(mapk3_metric)
 
-        self.logger.info('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%), mapk3: {:.4f}, TrainLoss: {:.4f}, TrainMapk3: {:.4f}\n'.format(
-            loss_avg.val, correct, len(self.valid_data_loader.dataset),
-            100. * correct / len(self.valid_data_loader.dataset), mapk_avg.val, self.loss_train_avg.val, self.mapk_train_avg.val))
+        self.logger.info("Epoch, LossV, LossT, Mapk3V, Mapk3T")
+        self.logger.info("| {} | {:.4f} | {:.4f} | {:.4f} | {:.4f} |".format(
+                         self.current_epoch,
+                         loss_avg.val,
+                         self.loss_train_avg.val,
+                         mapk_avg.val,
+                         self.mapk_train_avg.val))
+
 
         if self.summary_writer:
             self.summary_writer.add_scalar("valid_loss", loss_avg.val, self.current_epoch)
             self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, self.current_epoch)
 
         if self.scheduler:
+            old_lr = self.optimizer.param_groups[0]['lr']
             self.scheduler.step(loss_avg.val)
+            new_lr = self.optimizer.param_groups[0]['lr']
+            if old_lr > new_lr:
+                self.logger.info(f"Changing LR from {old_lr} to {new_lr}")
+
+
 
     def test(self):
         self.model.eval()
