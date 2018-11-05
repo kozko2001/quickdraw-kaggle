@@ -18,6 +18,7 @@ def main():
         default='None',
         help='The Configuration file in json format')
 
+    arg_parser.add_argument('testcsv', metavar='testcsv', default=None, help='csv for submission to kaggle')
     arg_parser.add_argument('checkpoint', metavar='checkpoint file', default=None, help='checkpoint file to use')
     args = arg_parser.parse_args()
 
@@ -37,6 +38,7 @@ def main():
     config.model = model
     config.dry_run = True
     config.checkpoint = args.checkpoint
+    config.testcsv = args.testcsv
 
     agent_class = globals()[config.agent]
     agent = agent_class(config)

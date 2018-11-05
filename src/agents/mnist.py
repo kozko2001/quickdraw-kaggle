@@ -17,7 +17,8 @@ import pandas as pd
 from os.path import join
 import os
 
-from dataset import Dataset
+#from dataset import Dataset
+import dataset
 
 from tensorboardX import SummaryWriter
 from utils.metrics import AverageMeter, mapk3
@@ -35,11 +36,16 @@ class MnistAgent:
         # define models
         self.model = config.model
 
-        # define data_loader
-        self.dataset = Dataset(config)
 
-        self.train_data_loader = self.dataset.train()
-        self.valid_data_loader = self.dataset.validate()
+        # define data_loader
+        bs = config.batch_size
+        num_workers = config["num_workers"] if "num_workers" in config else 8
+        data_root = config.data_root
+        size = config.image_size
+        images_per_class = config.images_per_class
+
+        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers)
+        self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers)
 
         # define loss
         self.loss = nn.CrossEntropyLoss()
@@ -51,7 +57,7 @@ class MnistAgent:
                                                                     patience=2,
                                                                     verbose=True,
                                                                     factor=0.5,
-                                                                    cooldown=2                                                                                                                            )
+                                                                    cooldown=2)
 
 
         # initialize counter
@@ -144,12 +150,6 @@ class MnistAgent:
 
         self.model.train()
 
-        data_len = len(self.train_data_loader)
-        steps = int(data_len//10)
-        current_step = 0
-        self.logger.info(f"Setting validation step at each {steps} step of total of {data_len} steps")
-
-
         for batch_idx, (data, target) in enumerate(self.train_data_loader):
             data, target = data.to(self.device), target.to(self.device)
             self.optimizer.zero_grad()
@@ -173,10 +173,6 @@ class MnistAgent:
                 if self.summary_writer:
                     self.summary_writer.add_scalar("train_loss", loss.item(), self.current_iteration)
                     self.summary_writer.add_scalar("train_mapk", mapk3_metric, self.current_iteration)
-
-            ## Valid each log2 steps
-            if batch_idx % steps ==0 and batch_idx > 0 and data_len > 100:
-                self.validate(True)
 
             self.current_iteration += 1
         self.save_checkpoint()
@@ -231,13 +227,14 @@ class MnistAgent:
     def test(self):
         self.model.eval()
 
-        test_data_loader, dataset = Dataset(self.config).test()
+
+        test_data_loader = dataset.test(self.config.testcsv, self.config.batch_size, self.config.image_size, num_workers=8)
 
         checkpoint = torch.load(self.config.checkpoint)
         self.model.load_state_dict(checkpoint)
 
-        key_ids = [os.path.basename(filepath)[:-4] for (filepath, cls) in dataset.imgs]
-        cls_to_idx = self.dataset.train_dataset.class_to_idx
+        cls_to_idx = {cls:idx for idx,cls in enumerate(self.train_dataset.classes)}
+        print(cls_to_idx)
         idx_to_cls =  {cls_to_idx[c]:c for c in cls_to_idx}
 
         def row2string(r):
@@ -248,10 +245,11 @@ class MnistAgent:
             return ' '.join(v)
 
         labels = []
+        key_ids = []
 
         with torch.no_grad():
             for idx, (data, target) in enumerate(test_data_loader):
-                data, target = data.to(self.device), target.to(self.device)
+                data = data.to(self.device)
                 output = self.model(data)
 
                 n = output.detach().cpu().numpy()
@@ -260,9 +258,11 @@ class MnistAgent:
 
                 predicted_y = [row2string(o) for o in order]
                 labels = labels + predicted_y
+                key_ids = key_ids + target.numpy().tolist()
 
                 if idx % 10 == 0:
                     print(f"{idx} of  {len(test_data_loader)}")
+
 
 
         d = {'key_id': key_ids,
