@@ -17,6 +17,13 @@ def main():
         metavar='config_json_file',
         default='None',
         help='The Configuration file in json format')
+    arg_parser.add_argument(
+        'checkpoint',
+        metavar='checkpoint',
+        nargs="?",
+        default=None,
+        help="checkpoint to start the model loaded")
+
     args = arg_parser.parse_args()
 
     # parse the config json file
@@ -33,6 +40,9 @@ def main():
 
     model = globals()[config.model.cls](config)
     config.model = model
+
+
+    config.checkpoint = args.checkpoint
 
     agent_class = globals()[config.agent]
     agent = agent_class(config)

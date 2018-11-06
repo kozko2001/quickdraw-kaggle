@@ -88,19 +88,22 @@ class MnistAgent:
             self.logger.info("Program will run on *****CPU*****\n")
 
         # Model Loading from the latest checkpoint if not found start from scratch.
-        self.load_checkpoint()
+        if self.config.checkpoint:
+            self.load_checkpoint(self.config.checkpoint)
 
         # Summary Writer
         run_name = f'{config.exp_name}'
         self.summary_writer = SummaryWriter(self.config.summary_dir, run_name)
 
-    def load_checkpoint(self, file_name = "checkpoint.pth.tar"):
+    def load_checkpoint(self, filename = "checkpoint.pth.tar"):
         """
         Latest checkpoint loader
         :param file_name: name of the checkpoint file
         :return:
         """
-        pass
+        checkpoint = torch.load(filename)
+        self.model.load_state_dict(checkpoint)
+
 
     def save_checkpoint(self, file_name=None, is_best=0):
         """
@@ -171,8 +174,10 @@ class MnistAgent:
                     self.current_epoch, batch_idx * len(data), len(self.train_data_loader.dataset),
                            100. * batch_idx / len(self.train_data_loader), loss.item(), mapk3_metric))
                 if self.summary_writer:
-                    self.summary_writer.add_scalar("train_loss", loss.item(), self.current_iteration)
-                    self.summary_writer.add_scalar("train_mapk", mapk3_metric, self.current_iteration)
+                    iteration = self.current_epoch * 1000 + int(1000. * batch_idx / len(self.train_data_loader))
+
+                    self.summary_writer.add_scalar("train_loss", loss.item(), iteration)
+                    self.summary_writer.add_scalar("train_mapk", mapk3_metric, iteration)
 
             self.current_iteration += 1
         self.save_checkpoint()
@@ -212,8 +217,10 @@ class MnistAgent:
 
 
         if self.summary_writer:
-            self.summary_writer.add_scalar("valid_loss", loss_avg.val, self.current_iteration)
-            self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, self.current_iteration)
+            iteration = (self.current_epoch + 1) * 1000
+
+            self.summary_writer.add_scalar("valid_loss", loss_avg.val, iteration)
+            self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, iteration)
 
         if self.scheduler:
             old_lr = self.optimizer.param_groups[0]['lr']
@@ -230,8 +237,7 @@ class MnistAgent:
 
         test_data_loader = dataset.test(self.config.testcsv, self.config.batch_size, self.config.image_size, num_workers=8)
 
-        checkpoint = torch.load(self.config.checkpoint)
-        self.model.load_state_dict(checkpoint)
+        self.load_checkpoint(self.config.checkpoint)
 
         cls_to_idx = {cls:idx for idx,cls in enumerate(self.train_dataset.classes)}
         print(cls_to_idx)
