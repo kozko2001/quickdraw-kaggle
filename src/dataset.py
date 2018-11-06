@@ -1,5 +1,5 @@
 from torchvision.transforms import ToTensor
-from os.path import join, isdir
+from os.path import join, isdir, isfile
 from os import listdir
 from torch import randperm
 from torch.utils.data.dataloader import DataLoader
@@ -8,7 +8,7 @@ import json
 import cv2
 import numpy as np
 from PIL import Image
-from random import random
+import random
 import pandas as pd
 from torchvision.transforms.functional import to_tensor, to_pil_image
 import torch
@@ -41,31 +41,51 @@ class Dataset():
         self.stats = self.loadStats(folder)
         self.images_per_class = images_per_class
         self.classes = self.stats[0]
+        self.r = None
+        self.random = []
+        self.draws_per_class = None
 
     def loadStats(self, folder):
         classes = sorted([d for d in listdir(folder) if isdir(join(folder, d))])
-        buckets_per_class = len(listdir(join(folder, classes[0])))
+        def filesInFolder(folder):
+            return [f for f  in listdir(folder) if isfile(join(folder, f))]
+
+        buckets_per_class = {c: len(filesInFolder(join(folder, c))) for c in classes }
 
         sample_bucket = join(folder, classes[0], "0.csv")
         with open(sample_bucket, "r") as f:
             data = json.load(f)
             draws_per_bucket = len(data)
 
-        return (classes, buckets_per_class, draws_per_bucket)
+        total_buckets = sum([buckets_per_class[k] for k in buckets_per_class])
+
+        return (classes, buckets_per_class, draws_per_bucket, total_buckets)
 
     def getStroke(self, i):
-        classes, buckets, draws = self.stats
-        draws_per_class = buckets * draws
+        classes, buckets, draws, total_buckets = self.stats
+        if not self.draws_per_class:
+            self.draws_per_class = [buckets[k] * draws for k in buckets]
+        draws_per_class = self.draws_per_class
+
+        if not self.r:
+            r = []
+            sum = 0
+            for dr in draws_per_class:
+                r.append(sum)
+                sum = sum + dr
+            r.append(sum)
+            self.r = r
+        else:
+            r = self.r
 
         ## select class
-        class_idx = i // draws_per_class
-        i = i % draws_per_class
+        p = [i < r for r in r].index(True) -1
+        class_idx = p
 
-        ## select bucket
+        i = i - r[class_idx]
+
         bucket_idx = i // draws
-        i = i % draws
-
-        draw_idx = i
+        draw_idx = i % draws
 
         filename = join(self.folder, classes[class_idx], f"{bucket_idx}.csv")
         with open(filename, "r") as f:
@@ -74,18 +94,21 @@ class Dataset():
 
 
     def __len__(self):
-        classes, buckets, draws = self.stats
+        classes, buckets, draws, total_buckets = self.stats
 
         if self.mode == "valid" or self.mode == "test":
-            return len(classes) * buckets * draws
+            return total_buckets * draws
         else:
             return len(classes) * self.images_per_class
 
 
     def __getitem__(self, i):
         if self.mode == "train":
-            classes, buckets, draws = self.stats
-            i = int(random() * (len(classes) * buckets * draws))
+            classes, buckets, draws, total_buckets = self.stats
+            if len(self.random) == 0:
+                self.random = random.sample(range(total_buckets * draws), 200000)
+                print("GENERATING...")
+            i = self.random.pop()
 
         strokes, class_idx = self.getStroke(i)
         arr = draw_cv2(strokes, size = self.size) ## shape (size, size)
@@ -137,15 +160,13 @@ if __name__ == "__main__":
     im = to_pil_image(im)
     im.save("test.png")
 
-    d = Dataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/train/", mode="train")
+    dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8)
     print(len(d))
 
     im,cls = d[0]
     print(im.shape, cls)
 
     import time
-#    dl = valid("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 80, num_workers=0)
-    dl = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8)
     print("valid num mini-batches", len(dl))
     start_time = time.time()
     s = next(iter(dl))
