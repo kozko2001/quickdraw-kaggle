@@ -51,13 +51,16 @@ class MnistAgent:
         self.loss = nn.CrossEntropyLoss()
 
         # define optimizer
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
+        if self.config.optim == "SGD":
+            self.optimizer = optim.SGD(self.model.parameters(),
+                                       lr=self.config.learning_rate,
+                                       nesterov=self.config.nesterov,
+                                       momentum=self.config.momentum,
+                                       weight_decay=self.config.w_decay)
+        elif self.config.optim == "ADAM":
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
 
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
-                                                                    patience=2,
-                                                                    verbose=True,
-                                                                    factor=0.5,
-                                                                    cooldown=2)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
 
 
         # initialize counter

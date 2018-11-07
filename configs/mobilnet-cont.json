@@ -1,11 +1,11 @@
 {
     "agent": "MnistAgent",
     "exp_name": "mobilenet-cont",
-    "batch_size": 1400,
+    "batch_size": 500,
     "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset",
     "image_size": 80,
     "images_per_class": 2000,
-    "learning_rate": 1e-3,
+    "learning_rate": 1e-5,
     "momentum": 0.90,
     "cuda": true,
     "seed": 42,
