@@ -2,7 +2,6 @@
 Mnist Main agent, as mentioned in the tutorial
 """
 import numpy as np
-
 from tqdm import tqdm
 
 import torch
@@ -22,6 +21,7 @@ import dataset
 
 from tensorboardX import SummaryWriter
 from utils.metrics import AverageMeter, mapk3
+from scheduler.Cyclic import CyclicScheduler, adjust_learning_rate, get_learning_rate, CyclicLR
 #from utils.misc import print_cuda_statistics
 import logging
 
@@ -44,8 +44,6 @@ class MnistAgent:
         size = config.image_size
         images_per_class = config.images_per_class
 
-        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers)
-        self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers)
 
         # define loss
         self.loss = nn.CrossEntropyLoss()
@@ -60,7 +58,25 @@ class MnistAgent:
         elif self.config.optim == "ADAM":
             self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
 
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
+        if "scheduler" in self.config:
+            if self.config.scheduler.type == "Cyclic":
+                self.scheduler = CyclicScheduler(self.optimizer,
+                                                 min_lr = config.learning_rate,
+                                                 max_lr = config.scheduler.max_lr,
+                                                 period = config.scheduler.period,
+                                                 warm_start = config.scheduler.warm_start)
+            elif self.config.scheduler.type == "Cyclic2":
+                self.scheduler = CyclicLR(
+                    self.optimizer,
+                    base_lr= config.learning_rate,
+                    max_lr = config.scheduler.max_lr,
+                    step_size= config.scheduler.step_size,
+                    mode = config.scheduler.mode,
+                    gamma = config.scheduler.gamma,
+                )
+
+        else:
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
 
 
         # initialize counter
@@ -93,6 +109,9 @@ class MnistAgent:
         # Model Loading from the latest checkpoint if not found start from scratch.
         if self.config.checkpoint:
             self.load_checkpoint(self.config.checkpoint)
+
+        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers)
+        self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers)
 
         # Summary Writer
         run_name = f'{config.exp_name}'
@@ -224,6 +243,7 @@ class MnistAgent:
 
             self.summary_writer.add_scalar("valid_loss", loss_avg.val, iteration)
             self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, iteration)
+            self.summary_writer.add_scalar("lr", self.optimizer.param_groups[0]['lr'], iteration)
 
         if self.scheduler:
             old_lr = self.optimizer.param_groups[0]['lr']
@@ -249,6 +269,9 @@ class MnistAgent:
         def row2string(r):
             v = [r[-1], r[-2], r[-3]]
             v = [v.item() for v in v]
+            print(v)
+            v = map(lambda v: v if v < 340 else 0, v)
+
             v = [idx_to_cls[v].replace(' ', '_') for v in v]
 
             return ' '.join(v)

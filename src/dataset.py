@@ -10,12 +10,17 @@ import numpy as np
 from PIL import Image
 import random
 import pandas as pd
-from torchvision.transforms.functional import to_tensor, to_pil_image
+from torchvision.transforms.functional import to_tensor, to_pil_image, normalize
+
 import torch
 import ast
 
 
 BASE_SIZE = 256
+
+mean = [0.09934586, 0.09934586, 0.09934586]
+std = [0.27682555, 0.27682555, 0.27682555]
+
 
 def draw_cv2(raw_strokes, size, lw=6, time_color=True):
     img = np.zeros((BASE_SIZE, BASE_SIZE), np.uint8)
@@ -114,7 +119,9 @@ class Dataset():
         arr = draw_cv2(strokes, size = self.size) ## shape (size, size)
         arr = np.stack((arr,)*3, axis=0)
         arr = (arr / 255).astype('f')
-        return torch.from_numpy(arr), class_idx
+        t = torch.from_numpy(arr)
+        t = normalize(t, mean, std)
+        return t, class_idx
 
 class TestDataset(Dataset):
     def __init__(self, csv, size):
@@ -147,10 +154,35 @@ def test(test_csv, bs, size, num_workers = 4):
     d = TestDataset(test_csv, size)
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False)
 
+def getImagesStats(folder):
+    d = Dataset(folder, 1000, 101, 80)
+
+    means = []
+    stds = []
+    for base in range(0, 30):
+        images = [d[(base * 1000) + i][0] for i in range(1000)] ## get 2000 images
+
+        subimgs = images
+        xx = np.stack(subimgs)
+#        print(xx.std(axis=(0, 2, 3)))
+
+
+        means.append(xx.mean(axis=(0, 2, 3)))
+        stds.append(xx.std(axis=(0, 2, 3)))
+
+    nn = np.stack(means)
+    ss = np.stack(stds)
+    print(nn.mean(axis=0))
+    print(ss.mean(axis=0))
+
+    return nn, ss
+
 
 
 
 if __name__ == "__main__":
+#    valid_folder = "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/valid/"
+#    getImagesStats(valid_folder)
     d = Dataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/valid/", mode="valid")
     print(len(d))
 
