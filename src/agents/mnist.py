@@ -70,13 +70,15 @@ class MnistAgent:
                     self.optimizer,
                     base_lr= config.learning_rate,
                     max_lr = config.scheduler.max_lr,
-                    step_size= config.scheduler.step_size,
+                    step_size_up = config.scheduler.step_size,
                     mode = config.scheduler.mode,
                     gamma = config.scheduler.gamma,
                 )
 
         else:
             self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
+
+        self.acum_batches = int(config["acum_batches"]) if "acum_batches" in config else 0
 
 
         # initialize counter
@@ -175,14 +177,22 @@ class MnistAgent:
 
         self.model.train()
 
-        for batch_idx, (data, target) in enumerate(self.train_data_loader):
-            data, target = data.to(self.device), target.to(self.device)
-            self.optimizer.zero_grad()
-            output = self.model(data)
-            loss = self.loss(output, target)
+        count = 0
 
+        for batch_idx, (data, target) in enumerate(self.train_data_loader):
+            if count == 0:
+                print("OPTIMIZING!!!", batch_idx)
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+                count = self.acum_batches
+
+            data, target = data.to(self.device), target.to(self.device)
+
+            output = self.model(data)
+            loss = self.loss(output, target) / self.acum_batches
             loss.backward()
-            self.optimizer.step()
+
+            count = count -1
 
             self.loss_train_avg.update(loss.item())
 
@@ -202,6 +212,9 @@ class MnistAgent:
                     self.summary_writer.add_scalar("train_mapk", mapk3_metric, iteration)
 
             self.current_iteration += 1
+
+            if self.scheduler and "step_batch" in dir(self.scheduler):
+                self.scheduler.step_batch(self.current_iteration)
         self.save_checkpoint()
 
     def validate(self, step = False):
@@ -245,7 +258,7 @@ class MnistAgent:
             self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, iteration)
             self.summary_writer.add_scalar("lr", self.optimizer.param_groups[0]['lr'], iteration)
 
-        if self.scheduler:
+        if self.scheduler and "step" in dir(self.scheduler):
             old_lr = self.optimizer.param_groups[0]['lr']
             self.scheduler.step(loss_avg.val)
             new_lr = self.optimizer.param_groups[0]['lr']
@@ -269,7 +282,6 @@ class MnistAgent:
         def row2string(r):
             v = [r[-1], r[-2], r[-3]]
             v = [v.item() for v in v]
-            print(v)
             v = map(lambda v: v if v < 340 else 0, v)
 
             v = [idx_to_cls[v].replace(' ', '_') for v in v]
