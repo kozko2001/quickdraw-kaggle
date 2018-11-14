@@ -67,6 +67,9 @@ class MnasNet(nn.Module):
         n_class = config.num_classes
         width_mult = config.model.width_mul if "width_mul" in config.model else 1.0
         input_size = config.model.input_size
+        orig_channel = config.input_channels
+
+        print("mnast.input_channels = ", orig_channel)
 
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
@@ -84,7 +87,7 @@ class MnasNet(nn.Module):
         self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
 
         # building first two layer
-        self.features = [Conv_3x3(3, input_channel, 2), SepConv_3x3(input_channel, 16)]
+        self.features = [Conv_3x3(orig_channel, input_channel, 2), SepConv_3x3(input_channel, 16)]
         input_channel = 16
 
         # building inverted residual blocks (MBConv)

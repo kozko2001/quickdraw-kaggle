@@ -54,6 +54,8 @@ class MobileNetV2(nn.Module):
         n_class = config.num_classes
         input_size = config.model.input_size
         width_mult = config.model.width_mult
+        orig_channel = config.input_channels
+
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
             # t, c, n, s
@@ -69,7 +71,7 @@ class MobileNetV2(nn.Module):
         # building first layer
         input_channel = int(32 * width_mult)
         self.last_channel = int(1280 * width_mult) if width_mult > 1.0 else 1280
-        self.features = [conv_bn(3, input_channel, 2)]
+        self.features = [conv_bn(orig_channel, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in self.interverted_residual_setting:
             output_channel = int(c * width_mult)

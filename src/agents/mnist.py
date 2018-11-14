@@ -58,26 +58,6 @@ class MnistAgent:
         elif self.config.optim == "ADAM":
             self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, betas=(0.9, 0.99))
 
-        if "scheduler" in self.config:
-            if self.config.scheduler.type == "Cyclic":
-                self.scheduler = CyclicScheduler(self.optimizer,
-                                                 min_lr = config.learning_rate,
-                                                 max_lr = config.scheduler.max_lr,
-                                                 period = config.scheduler.period,
-                                                 warm_start = config.scheduler.warm_start)
-            elif self.config.scheduler.type == "Cyclic2":
-                self.scheduler = CyclicLR(
-                    self.optimizer,
-                    base_lr= config.learning_rate,
-                    max_lr = config.scheduler.max_lr,
-                    step_size_up = config.scheduler.step_size,
-                    mode = config.scheduler.mode,
-                    gamma = config.scheduler.gamma,
-                )
-
-        else:
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
-
         self.acum_batches = int(config["acum_batches"]) if "acum_batches" in config else 0
 
 
@@ -112,8 +92,37 @@ class MnistAgent:
         if self.config.checkpoint:
             self.load_checkpoint(self.config.checkpoint)
 
-        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers)
-        self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers)
+        input_channels = int(config.input_channels) if "input_channels" in config else 1
+        self.input_channels = input_channels
+        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers, input_channels=input_channels)
+        self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers, input_channels=input_channels)
+
+
+        if "scheduler" in self.config:
+            if self.config.scheduler.type == "Cyclic":
+                self.scheduler = CyclicScheduler(self.optimizer,
+                                                 min_lr = config.learning_rate,
+                                                 max_lr = config.scheduler.max_lr,
+                                                 period = config.scheduler.period,
+                                                 warm_start = config.scheduler.warm_start)
+            elif self.config.scheduler.type == "Cyclic2":
+                epoch_step = config.scheduler.step_size
+                minibatches_in_epoch = len(self.train_dataset)
+                steps_up = int(minibatches_in_epoch * epoch_step / 2.0)
+                print("steps up", steps_up)
+
+                self.scheduler = CyclicLR(
+                    self.optimizer,
+                    base_lr= config.learning_rate,
+                    max_lr = config.scheduler.max_lr,
+                    step_size_up = steps_up,
+                    mode = config.scheduler.mode,
+                    gamma = config.scheduler.gamma,
+                )
+
+        else:
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=1)
+
 
         # Summary Writer
         run_name = f'{config.exp_name}'
@@ -179,40 +188,47 @@ class MnistAgent:
 
         count = 0
 
+        def logging(output, target, loss, batch_idx):
+            mapk3_metric = mapk3(output, target)
+            self.mapk_train_avg.update(mapk3_metric)
+
+
+            self.logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tMapk3: {:.6f}'.format(
+                self.current_epoch, batch_idx * len(data), len(self.train_data_loader.dataset),
+                100. * batch_idx / len(self.train_data_loader), loss.item(), mapk3_metric))
+            if self.summary_writer:
+                iteration = self.current_epoch * 1000 + int(1000. * batch_idx / len(self.train_data_loader))
+
+                self.summary_writer.add_scalar("train_loss", loss.item(), iteration)
+                self.summary_writer.add_scalar("train_mapk", mapk3_metric, iteration)
+                self.summary_writer.add_scalar("lr", self.optimizer.param_groups[0]['lr'], iteration)
+
+
         for batch_idx, (data, target) in enumerate(self.train_data_loader):
             if count == 0:
-                print("OPTIMIZING!!!", batch_idx)
                 self.optimizer.step()
                 self.optimizer.zero_grad()
                 count = self.acum_batches
-
             data, target = data.to(self.device), target.to(self.device)
 
             output = self.model(data)
-            loss = self.loss(output, target) / self.acum_batches
-            loss.backward()
 
-            count = count -1
+            loss = self.loss(output, target)
+
+            ## Loggin and gradient accum
+            if batch_idx % self.config.log_interval == 0:
+                logging(output, target, loss, batch_idx)
+
+            if self.acum_batches >= 2:
+                loss = loss / self.acum_batches
+
+            loss.backward()
 
             self.loss_train_avg.update(loss.item())
 
-            ## Logging
-            if batch_idx % self.config.log_interval == 0:
-                mapk3_metric = mapk3(output, target)
-                self.mapk_train_avg.update(mapk3_metric)
-
-
-                self.logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tMapk3: {:.6f}'.format(
-                    self.current_epoch, batch_idx * len(data), len(self.train_data_loader.dataset),
-                           100. * batch_idx / len(self.train_data_loader), loss.item(), mapk3_metric))
-                if self.summary_writer:
-                    iteration = self.current_epoch * 1000 + int(1000. * batch_idx / len(self.train_data_loader))
-
-                    self.summary_writer.add_scalar("train_loss", loss.item(), iteration)
-                    self.summary_writer.add_scalar("train_mapk", mapk3_metric, iteration)
 
             self.current_iteration += 1
-
+            count = count -1
             if self.scheduler and "step_batch" in dir(self.scheduler):
                 self.scheduler.step_batch(self.current_iteration)
         self.save_checkpoint()
@@ -256,7 +272,7 @@ class MnistAgent:
 
             self.summary_writer.add_scalar("valid_loss", loss_avg.val, iteration)
             self.summary_writer.add_scalar("valid_mapk", mapk_avg.val, iteration)
-            self.summary_writer.add_scalar("lr", self.optimizer.param_groups[0]['lr'], iteration)
+
 
         if self.scheduler and "step" in dir(self.scheduler):
             old_lr = self.optimizer.param_groups[0]['lr']
@@ -271,7 +287,7 @@ class MnistAgent:
         self.model.eval()
 
 
-        test_data_loader = dataset.test(self.config.testcsv, self.config.batch_size, self.config.image_size, num_workers=8)
+        test_data_loader = dataset.test(self.config.testcsv, self.config.batch_size, self.config.image_size, num_workers=8, input_channels=self.input_channels)
 
         self.load_checkpoint(self.config.checkpoint)
 

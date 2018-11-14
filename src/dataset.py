@@ -38,7 +38,7 @@ def draw_cv2(raw_strokes, size, lw=6, time_color=True):
 
 class Dataset():
 
-    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80):
+    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80, input_channels = 1):
         self.folder = folder
         self.mode = mode
         self.size = size
@@ -49,6 +49,7 @@ class Dataset():
         self.r = None
         self.random = []
         self.draws_per_class = None
+        self.input_channels = input_channels
 
     def loadStats(self, folder):
         classes = sorted([d for d in listdir(folder) if isdir(join(folder, d))])
@@ -117,16 +118,21 @@ class Dataset():
 
         strokes, class_idx = self.getStroke(i)
         arr = draw_cv2(strokes, size = self.size) ## shape (size, size)
-        arr = np.stack((arr,)*3, axis=0)
+        if self.input_channels > 1:
+            arr = np.stack((arr,)*3, axis=0)
         arr = (arr / 255).astype('f')
         t = torch.from_numpy(arr)
-        t = normalize(t, mean, std)
+        if self.input_channels == 1:
+            t = torch.unsqueeze(t, 0)
+
+#        t = normalize(t, mean, std)
         return t, class_idx
 
 class TestDataset(Dataset):
-    def __init__(self, csv, size):
+    def __init__(self, csv, size, input_channels = 1):
         self.mode = "test"
         self.size = size
+        self.input_channels = input_channels
 
         self.df = pd.read_csv(csv)
         self.strokes = self.df['drawing'].apply(ast.literal_eval)
@@ -138,20 +144,20 @@ class TestDataset(Dataset):
     def getStroke(self, i):
         return self.strokes[i], self.ids[i]
 
-def train(folder, bs, images_per_class, size, num_workers = 4):
+def train(folder, bs, images_per_class, size, num_workers = 4, input_channels = 1):
     folder = join(folder, "train")
-    d = Dataset(folder, mode="train", images_per_class=images_per_class, size=size)
+    d = Dataset(folder, mode="train", images_per_class=images_per_class, size=size, input_channels = input_channels)
 
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False), d
 
-def valid(folder, bs, size, num_workers = 4):
+def valid(folder, bs, size, num_workers = 4, input_channels = 1):
     folder = join(folder, "valid")
-    d = Dataset(folder, mode="valid", images_per_class=None, size=size)
+    d = Dataset(folder, mode="valid", images_per_class=None, size=size, input_channels = input_channels)
 
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False)
 
-def test(test_csv, bs, size, num_workers = 4):
-    d = TestDataset(test_csv, size)
+def test(test_csv, bs, size, num_workers = 4, input_channels = 1):
+    d = TestDataset(test_csv, size, input_channels = input_channels)
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False)
 
 def getImagesStats(folder):
@@ -164,7 +170,6 @@ def getImagesStats(folder):
 
         subimgs = images
         xx = np.stack(subimgs)
-#        print(xx.std(axis=(0, 2, 3)))
 
 
         means.append(xx.mean(axis=(0, 2, 3)))
@@ -187,27 +192,29 @@ if __name__ == "__main__":
     print(len(d))
 
     im, cls = d[0]
-    print(im.shape, cls)
-    print(im)
-    im = to_pil_image(im)
-    im.save("test.png")
+    im = torch.unsqueeze(im, 0)
+    print(im.shape)
+    # print(im.shape, cls)
+    # print(im)
+    # im = to_pil_image(im)
+    # im.save("test.png")
 
-    dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8)
-    print(len(d))
+    # dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8)
+    # print(len(d))
 
-    im,cls = d[0]
-    print(im.shape, cls)
+    # im,cls = d[0]
+    # print(im.shape, cls)
 
-    import time
-    print("valid num mini-batches", len(dl))
-    start_time = time.time()
-    s = next(iter(dl))
-    for x in s:
-        print(f" shape: {x.shape}")
+    # import time
+    # print("valid num mini-batches", len(dl))
+    # start_time = time.time()
+    # s = next(iter(dl))
+    # for x in s:
+    #     print(f" shape: {x.shape}")
 
-    print(f"elapsed {time.time() - start_time}")
+    # print(f"elapsed {time.time() - start_time}")
 
-    d = TestDataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw/test_simplified.csv", 80)
-    print("len test dataset" , len(d))
+    # d = TestDataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw/test_simplified.csv", 80)
+    # print("len test dataset" , len(d))
 
-    print(d[0])
+    # print(d[0])

@@ -80,7 +80,7 @@ class CifarResNeXt(nn.Module):
     https://arxiv.org/pdf/1611.05431.pdf
     """
 
-    def __init__(self, cardinality, depth, nlabels, base_width, widen_factor=4):
+    def __init__(self, cardinality, depth, nlabels, base_width, widen_factor=4, orig_channels = 1):
         """ Constructor
 
         Args:
@@ -100,7 +100,8 @@ class CifarResNeXt(nn.Module):
         self.output_size = 64
         self.stages = [64, 64 * self.widen_factor, 128 * self.widen_factor, 256 * self.widen_factor]
 
-        self.conv_1_3x3 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)
+
+        self.conv_1_3x3 = nn.Conv2d(orig_channels, 64, 3, 1, 1, bias=False)
         self.bn_1 = nn.BatchNorm2d(64)
         self.stage_1 = self.block('stage_1', self.stages[0], self.stages[1], 1)
         self.stage_2 = self.block('stage_2', self.stages[1], self.stages[2], 2)
@@ -160,8 +161,8 @@ class ResNext(nn.Module):
         num_labels = config.num_classes
         base_width = config.model.base_width
         widen_factor = config.model.widen_factor
-
-        self.model = CifarResNeXt(cardinality, depth, num_labels, base_width, widen_factor)
+        orig_channel = config.input_channels
+        self.model = CifarResNeXt(cardinality, depth, num_labels, base_width, widen_factor, orig_channel)
 
     def forward(self, x):
         return self.model(x)

@@ -44,10 +44,11 @@ class Darknet(nn.Module):
         num_blocks = config.model.num_blocks
         num_classes = config.num_classes
         nf = config.model.nf
+        input_channels = int(config.input_channels) if "input_channels" in config else 1
 
         "create darknet with `nf` and `num_blocks` layers"
         super().__init__()
-        layers = [conv_layer(3, nf, ks=3, stride=1)]
+        layers = [conv_layer(input_channels, nf, ks=3, stride=1)]
         for i,nb in enumerate(num_blocks):
             layers += self.make_group_layer(nf, nb, stride=2-(i==1))
             nf *= 2
