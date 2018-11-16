@@ -69,8 +69,6 @@ class MnasNet(nn.Module):
         input_size = config.model.input_size
         orig_channel = config.input_channels
 
-        print("mnast.input_channels = ", orig_channel)
-
         # setting of inverted residual blocks
         self.interverted_residual_setting = [
             # t, c, n, s, k

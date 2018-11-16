@@ -93,8 +93,15 @@ class MnistAgent:
             self.load_checkpoint(self.config.checkpoint)
 
         input_channels = int(config.input_channels) if "input_channels" in config else 1
+        prob_drop_stroke = float(config.prob_drop_stroke) if "prob_drop_stroke" in config else 0.0
         self.input_channels = input_channels
-        self.train_data_loader, self.train_dataset = dataset.train(data_root, bs, images_per_class, size, num_workers, input_channels=input_channels)
+        self.train_data_loader, self.train_dataset = dataset.train(data_root,
+                                                                   bs,
+                                                                   images_per_class,
+                                                                   size,
+                                                                   num_workers,
+                                                                   input_channels=input_channels,
+                                                                   prob_drop_stroke=prob_drop_stroke)
         self.valid_data_loader = dataset.valid(data_root, bs, size, num_workers, input_channels=input_channels)
 
 
@@ -107,9 +114,9 @@ class MnistAgent:
                                                  warm_start = config.scheduler.warm_start)
             elif self.config.scheduler.type == "Cyclic2":
                 epoch_step = config.scheduler.step_size
-                minibatches_in_epoch = len(self.train_dataset)
+
+                minibatches_in_epoch = int(len(self.train_dataset) / bs)
                 steps_up = int(minibatches_in_epoch * epoch_step / 2.0)
-                print("steps up", steps_up)
 
                 self.scheduler = CyclicLR(
                     self.optimizer,

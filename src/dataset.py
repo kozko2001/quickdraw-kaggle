@@ -38,7 +38,7 @@ def draw_cv2(raw_strokes, size, lw=6, time_color=True):
 
 class Dataset():
 
-    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80, input_channels = 1):
+    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80, input_channels = 1, prob_drop_stroke = 0.0):
         self.folder = folder
         self.mode = mode
         self.size = size
@@ -50,6 +50,7 @@ class Dataset():
         self.random = []
         self.draws_per_class = None
         self.input_channels = input_channels
+        self.prob_drop_stroke = prob_drop_stroke
 
     def loadStats(self, folder):
         classes = sorted([d for d in listdir(folder) if isdir(join(folder, d))])
@@ -117,6 +118,12 @@ class Dataset():
             i = self.random.pop()
 
         strokes, class_idx = self.getStroke(i)
+
+        ### randomly remove strokes with a prob
+        if self.prob_drop_stroke > 0.0:
+            probs = np.random.random(len(strokes))
+            strokes = [v for (v,p) in zip(strokes, probs) if p < (1.0 - self.prob_drop_stroke)]
+
         arr = draw_cv2(strokes, size = self.size) ## shape (size, size)
         if self.input_channels > 1:
             arr = np.stack((arr,)*3, axis=0)
@@ -127,6 +134,8 @@ class Dataset():
 
 #        t = normalize(t, mean, std)
         return t, class_idx
+
+
 
 class TestDataset(Dataset):
     def __init__(self, csv, size, input_channels = 1):
@@ -144,9 +153,14 @@ class TestDataset(Dataset):
     def getStroke(self, i):
         return self.strokes[i], self.ids[i]
 
-def train(folder, bs, images_per_class, size, num_workers = 4, input_channels = 1):
+def train(folder, bs, images_per_class, size, num_workers = 4, input_channels = 1, prob_drop_stroke = 0.0):
     folder = join(folder, "train")
-    d = Dataset(folder, mode="train", images_per_class=images_per_class, size=size, input_channels = input_channels)
+    d = Dataset(folder,
+                mode="train",
+                images_per_class=images_per_class,
+                size=size,
+                input_channels = input_channels,
+                prob_drop_stroke=prob_drop_stroke)
 
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False), d
 
@@ -188,18 +202,30 @@ def getImagesStats(folder):
 if __name__ == "__main__":
 #    valid_folder = "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/valid/"
 #    getImagesStats(valid_folder)
-    d = Dataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/valid/", mode="valid")
-    print(len(d))
+#    d = Dataset("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/valid/", mode="valid")
+#    print(len(d))
 
-    im, cls = d[0]
-    im = torch.unsqueeze(im, 0)
-    print(im.shape)
+#    im, cls = d[0]
     # print(im.shape, cls)
     # print(im)
     # im = to_pil_image(im)
     # im.save("test.png")
 
-    # dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8)
+    dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8, input_channels=1, prob_drop_stroke=0.0)
+    d.mode = ""
+    ## real
+    im, cls = d[0]
+    im = to_pil_image(im)
+    im.save("test_real.png")
+
+    ## dropped
+    d.prob_drop_stroke = 0.2
+    for i in range(10):
+        im, cls = d[0]
+        im = to_pil_image(im)
+        im.save(f"test_{i}.png")
+
+
     # print(len(d))
 
     # im,cls = d[0]
