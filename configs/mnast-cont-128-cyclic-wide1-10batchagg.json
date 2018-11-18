@@ -1,0 +1,32 @@
+{
+  "acum_batches": 30,
+  "scheduler": {
+    "mode": "triangular",
+    "max_lr": 0.001,
+    "step_size": 10,
+    "gamma": 0.1,
+    "type": "Cyclic2"
+  },
+  "model": {
+    "width_mul": 2.0,
+    "input_size": 32,
+    "cls": "MnasNet"
+  },
+  "input_channels": 1,
+  "num_classes": 340,
+  "pct_data": 1,
+  "log_interval": 10,
+  "max_epoch": 60,
+  "gpu_device": 0,
+  "seed": 42,
+  "cuda": true,
+  "momentum": 0.9,
+  "learning_rate": 1e-06,
+  "optim": "ADAM",
+  "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset",
+  "images_per_class": 2000,
+  "image_size": 128,
+  "batch_size": 400,
+  "exp_name": "mnast-cont-128-agg10-wide",
+  "agent": "MnistAgent"
+}

@@ -1,0 +1,23 @@
+{
+    "agent": "MnistAgent",
+    "exp_name": "densenet-small",
+    "batch_size": 600,
+    "image_size": 80,
+    "images_per_class": 2000,
+    "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset",
+    "learning_rate": 1e-3,
+    "momentum": 0.90,
+    "cuda": true,
+    "seed": 42,
+    "gpu_device": 0,
+    "max_epoch": 60,
+    "log_interval": 10,
+    "pct_data": 1,
+    "num_classes": 340,
+    "model": {
+        "cls": "Densenet",
+        "conf": 121,
+        "bn_size": 4,
+        "drop_rate": 0.2
+    }
+}

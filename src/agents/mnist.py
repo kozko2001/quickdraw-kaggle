@@ -26,6 +26,7 @@ from scheduler.Cyclic import CyclicScheduler, adjust_learning_rate, get_learning
 import logging
 
 from math import log2
+from losses.svm import SmoothSVM
 
 class MnistAgent:
 
@@ -46,7 +47,15 @@ class MnistAgent:
 
 
         # define loss
-        self.loss = nn.CrossEntropyLoss()
+        loss_name = config.loss.name if "loss" in config else "cross_entropy"
+
+        if loss_name == "cross_entropy":
+            self.loss = nn.CrossEntropyLoss()
+        elif loss_name == "smooth_svm":
+            tau = float(config.loss.tau)
+            alpha = float(config.loss.alpha)
+            k = int(config.loss.k)
+            self.loss = SmoothSVM(config.num_classes, alpha, tau, 3)
 
         # define optimizer
         if self.config.optim == "SGD":
@@ -212,7 +221,7 @@ class MnistAgent:
 
 
         for batch_idx, (data, target) in enumerate(self.train_data_loader):
-            if count == 0:
+            if count <= 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
                 count = self.acum_batches

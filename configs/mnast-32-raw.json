@@ -1,0 +1,24 @@
+{
+  "images_per_class": 2000,
+  "image_size": 32,
+  "agent": "MnistAgent",
+  "exp_name": "mnast-cont32-raw",
+  "batch_size": 8000,
+  "data_root": "/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-rawdataset",
+  "momentum": 0.9,
+  "cuda": true,
+  "seed": 42,
+  "gpu_device": 0,
+  "max_epoch": 60,
+  "learning_rate": 0.001,
+  "log_interval": 10,
+  "pct_data": 1,
+  "num_classes": 340,
+  "optim": "ADAM",
+  "model": {
+    "cls": "MnasNet",
+    "input_size": 32
+  },
+  "input_channels": 3,
+  "raw_dataset": true
+}
