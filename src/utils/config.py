@@ -58,7 +58,7 @@ def get_config_from_json(json_file):
             exit(-1)
 
 
-def process_config(json_file):
+def process_config(json_file, create_folders = True):
     """
     Get the json file
     Processing it with EasyDict to be accessible as attributes
@@ -83,12 +83,18 @@ def process_config(json_file):
         exit(-1)
 
     epoch_time = int(time.time())
-    folder_name = f"{config.exp_name}_{epoch_time}"
+    print("create folders", create_folders)
+    if create_folders:
+        folder_name = os.path.join("experiments", f"{config.exp_name}_{epoch_time}")
+    else:
+        folder_name = "/tmp/last-experiment"
+
     # create some important directories to be used for that experiment.
-    config.summary_dir = os.path.join("experiments", folder_name, "summaries/")
-    config.checkpoint_dir = os.path.join("experiments", folder_name, "checkpoints/")
-    config.out_dir = os.path.join("experiments", folder_name, "out/")
-    config.log_dir = os.path.join("experiments", folder_name, "logs/")
+    config.summary_dir = os.path.join(folder_name, "summaries/")
+    config.checkpoint_dir = os.path.join(folder_name, "checkpoints/")
+    config.out_dir = os.path.join(folder_name, "out/")
+    config.log_dir = os.path.join(folder_name, "logs/")
+    print(config.summary_dir)
     create_dirs([config.summary_dir, config.checkpoint_dir, config.out_dir, config.log_dir])
 
     # setup logging in the project

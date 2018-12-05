@@ -20,10 +20,13 @@ def main():
 
     arg_parser.add_argument('testcsv', metavar='testcsv', default=None, help='csv for submission to kaggle')
     arg_parser.add_argument('checkpoint', metavar='checkpoint file', default=None, help='checkpoint file to use')
+    arg_parser.add_argument('--bs', nargs='?', help='batch_size', default=-1)
     args = arg_parser.parse_args()
 
     # parse the config json file
-    config = process_config(args.config)
+    config = process_config(args.config, create_folders=False)
+    if int(args.bs) > -1:
+        config.batch_size = int(args.bs)
 
     # Create the Agent and pass all the configuration to it then run it..
     logger.info(f"config is {config}")

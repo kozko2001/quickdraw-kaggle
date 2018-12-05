@@ -38,12 +38,12 @@ def draw_cv2(raw_strokes, size, lw=6, time_color=True):
 
 class Dataset():
 
-    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80, input_channels = 1, prob_drop_stroke = 0.0):
+    def __init__(self, folder, mode="train", images_per_class = 1500, size = 80, input_channels = 1, prob_drop_stroke = 0.0, specific_folders=None):
         self.folder = folder
         self.mode = mode
         self.size = size
 
-        self.stats = self.loadStats(folder)
+        self.stats = self.loadStats(folder, specific_folders)
         self.images_per_class = images_per_class
         self.classes = self.stats[0]
         self.r = None
@@ -52,12 +52,25 @@ class Dataset():
         self.input_channels = input_channels
         self.prob_drop_stroke = prob_drop_stroke
 
-    def loadStats(self, folder):
-        classes = sorted([d for d in listdir(folder) if isdir(join(folder, d))])
+    def loadStats(self, folder, specific_folders=None):
+
+        if not specific_folders:
+            classes = sorted([d for d in listdir(folder) if isdir(join(folder, d))])
+        else:
+            classes = sorted(specific_folders)
+
         def filesInFolder(folder):
             return [f for f  in listdir(folder) if isfile(join(folder, f))]
 
-        buckets_per_class = {c: len(filesInFolder(join(folder, c))) for c in classes }
+        if self.mode == "train":
+            if isfile("cache_buckets_per_class.json"):
+                buckets_per_class = json.load(open("cache_buckets_per_class.json", "r"))
+            else:
+                print("GETTING BUCKETS PER CLASS")
+                buckets_per_class = {c: len(filesInFolder(join(folder, c))) for c in classes }
+                json.dump(buckets_per_class, open("cache_buckets_per_class.json", "w"))
+        else:
+            buckets_per_class = {c: len(filesInFolder(join(folder, c))) for c in classes }
 
         sample_bucket = join(folder, classes[0], "0.csv")
         with open(sample_bucket, "r") as f:
@@ -65,7 +78,6 @@ class Dataset():
             draws_per_bucket = len(data)
 
         total_buckets = sum([buckets_per_class[k] for k in buckets_per_class])
-
         return (classes, buckets_per_class, draws_per_bucket, total_buckets)
 
     def getStroke(self, i):
@@ -138,7 +150,7 @@ class Dataset():
 
 
 class TestDataset(Dataset):
-    def __init__(self, csv, size, input_channels = 1):
+    def __init__(self, csv, size, input_channels = 1, prob = 0.0):
         self.mode = "test"
         self.size = size
         self.input_channels = input_channels
@@ -146,6 +158,7 @@ class TestDataset(Dataset):
         self.df = pd.read_csv(csv)
         self.strokes = self.df['drawing'].apply(ast.literal_eval)
         self.ids = self.df["key_id"].tolist()
+        self.prob_drop_stroke = prob
 
     def __len__(self):
         return len(self.df)
@@ -153,26 +166,27 @@ class TestDataset(Dataset):
     def getStroke(self, i):
         return self.strokes[i], self.ids[i]
 
-def train(folder, bs, images_per_class, size, num_workers = 4, input_channels = 1, prob_drop_stroke = 0.0):
+def train(folder, bs, images_per_class, size, num_workers = 4, input_channels = 1, prob_drop_stroke = 0.0, specific_folders=None):
     folder = join(folder, "train")
     d = Dataset(folder,
                 mode="train",
                 images_per_class=images_per_class,
                 size=size,
                 input_channels = input_channels,
-                prob_drop_stroke=prob_drop_stroke)
+                prob_drop_stroke=prob_drop_stroke,
+                specific_folders=specific_folders)
 
     return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False), d
 
-def valid(folder, bs, size, num_workers = 4, input_channels = 1):
+def valid(folder, bs, size, num_workers = 4, input_channels = 1, specific_folders=None):
     folder = join(folder, "valid")
-    d = Dataset(folder, mode="valid", images_per_class=None, size=size, input_channels = input_channels)
+    d = Dataset(folder, mode="valid", images_per_class=None, size=size, input_channels = input_channels, specific_folders=specific_folders)
 
-    return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False)
+    return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False), d
 
-def test(test_csv, bs, size, num_workers = 4, input_channels = 1):
-    d = TestDataset(test_csv, size, input_channels = input_channels)
-    return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False)
+def test(test_csv, bs, size, num_workers = 4, input_channels = 1, prob = 0.0):
+    d = TestDataset(test_csv, size, input_channels = input_channels, prob=prob)
+    return DataLoader(d, batch_size=bs, num_workers=num_workers, shuffle=False), d
 
 def getImagesStats(folder):
     d = Dataset(folder, 1000, 101, 80)
@@ -211,25 +225,29 @@ if __name__ == "__main__":
     # im = to_pil_image(im)
     # im.save("test.png")
 
-    dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8, input_channels=1, prob_drop_stroke=0.0)
-    d.mode = ""
-    ## real
-    im, cls = d[0]
+    # dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/", 1400, 1500, 80, num_workers=8, input_channels=1, prob_drop_stroke=0.0)
+    # d.mode = ""
+    # ## real
+    # im, cls = d[0]
+    # im = to_pil_image(im)
+    # im.save("test_real.png")
+
+    # ## dropped
+    # d.prob_drop_stroke = 0.2
+    # for i in range(10):
+    #     im, cls = d[0]
+    #     im = to_pil_image(im)
+    #     im.save(f"test_{i}.png")
+
+
+    dl,d  = train("/home/kozko/tmp/kaggle/quickdraw/input/quickdraw-dataset/",
+                  1400, 1500, 80, num_workers=8,
+                  input_channels=1, prob_drop_stroke=0.0,specific_folders=['paint can', 'yoga'] )
+
+    im,cls = d[0]
+    print(im.shape, cls)
     im = to_pil_image(im)
-    im.save("test_real.png")
-
-    ## dropped
-    d.prob_drop_stroke = 0.2
-    for i in range(10):
-        im, cls = d[0]
-        im = to_pil_image(im)
-        im.save(f"test_{i}.png")
-
-
-    # print(len(d))
-
-    # im,cls = d[0]
-    # print(im.shape, cls)
+    im.save(f"test.png")
 
     # import time
     # print("valid num mini-batches", len(dl))

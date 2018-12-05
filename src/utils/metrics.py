@@ -1,6 +1,7 @@
 from torch import Tensor
 import numpy as np
 import torch
+from finegrain import refine
 
 class AverageMeter:
     """
@@ -51,9 +52,12 @@ def apk(actual, predicted, k=3):
 
     return score / min(len(actual), k)
 
-def mapk3(pred:Tensor, targ:Tensor):
+def mapk3(pred:Tensor, targ:Tensor, mode="", idx=0):
     pred = pred.detach()
     order = np.argsort(pred.cpu().numpy(), 1)[:, -3:]
+#    if mode != "":
+#        order = refine(order, mode, idx)
+
     order = [[z.item(),y.item(),x.item()] for x,y, z in order]
 
     actual = targ.cpu().numpy()

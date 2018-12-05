@@ -23,11 +23,17 @@ def main():
         nargs="?",
         default=None,
         help="checkpoint to start the model loaded")
+    arg_parser.add_argument('--bs', nargs='?', help='batch_size', default=-1)
+    arg_parser.add_argument('-v', action='store_true')
 
     args = arg_parser.parse_args()
+    validation_only = args.v
 
     # parse the config json file
-    config = process_config(args.config)
+
+    config = process_config(args.config, create_folders=not validation_only)
+    if int(args.bs) > -1:
+        config.batch_size = int(args.bs)
 
     # Create the Agent and pass all the configuration to it then run it..
     logger.info(f"config is {config}")
@@ -46,7 +52,11 @@ def main():
 
     agent_class = globals()[config.agent]
     agent = agent_class(config)
-    agent.run()
+
+    if not validation_only:
+        agent.run()
+    else:
+        agent.run_validation_only()
     agent.finalize()
 
 
